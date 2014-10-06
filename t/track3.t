@@ -10,29 +10,11 @@ use Data::Dumper;
 use_ok( 'Card::Magnetic');
 
 my $stripe = <<EOF;
-%A0000000000000000^RECSKY^171700012345888?
-;0000000000000000^171700012345888?
-;0000000000000000^1232343456456756786778901239011223171712345678903456789?
+;240000000000000000^1232343456456756786778901239011223171712345678903456789?
 EOF
 
 my $structure = {
-    track1 => {
-        format_code     => "A",
-        PAN             => "0000000000000000",
-        NAME            => "RECSKY",
-        EXPIRATION_DATE => "1717",
-        SERVICE_CODE    => "000",
-        PVV             => "12345",
-        CVV             => "888",
-    },
-    track2 =>{
-        PAN             => "0000000000000000",
-        EXPIRATION_DATE => "1717",
-        SERVICE_CODE    => "000",
-        PVV             => "12345",
-        CVV             => "888",
-    },
-    track3 =>{
+        FORMAT_CODE     => 24,
         PAN             => "0000000000000000",
         COUNTRY_CODE    => "123",
         CURRENCY_CODE   => "234",
@@ -51,7 +33,6 @@ my $structure = {
         CARD_SECURITY   => "234567890",
         RELAY_MARKER    => "3",
         CRYPTO_CHECK    => "456789",
-    },
 };
 
 my $card = Card::Magnetic->new();
@@ -60,8 +41,8 @@ $card->stripe( $stripe );
 
 $card->parse();
 
-print Dumper $card;
+is_deeply( $card->{ track3 }, $structure, "Stripe Structure" );
 
-# ok
+print Dumper $card;
 
 done_testing();

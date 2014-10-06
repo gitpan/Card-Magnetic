@@ -20,7 +20,6 @@ sub stripe{
     return $self->{ stripe } if ! $stripe;
 
     $self->{ stripe } = $stripe;
-
 }
 
 sub parse{
@@ -34,9 +33,9 @@ sub parse{
         $stripe = $` . $';
         $self->{ track1 }{ track } = $track1;
         chomp $track1;
-        if( $track1 =~ /^%(\w)(\d+)\^(\w+)\^(\d{4})(\d{3})(\d{4})(\d{3})/ ) {
+        if( $track1 =~ /^%(\w)(\d+)\^(\w+)\^(\d{4})(\d{3})(\d{5})(\d{3})/ ) {
             $self->{ track1 } = {
-                format_code     => $1,
+                FORMAT_CODE     => $1,
                 PAN             => $2,
                 NAME            => $3,
                 EXPIRATION_DATE => $4,
@@ -47,12 +46,12 @@ sub parse{
         }
     }
     #track2
-    if( $stripe =~ /\;[\w\^]+\?\n/ ){
+    if( $stripe =~ /\;[\w\^]+\?\n/ and ( length $& < 39 ) ){  # stripe...
         my $track2 =  $&;
         $stripe = $` . $';
         $self->{ track2 }{ track } = $track2;
         chomp $track2;
-        if( $track2 =~ /(\d+)\^(\d{4})(\d{3})(\d{4})(\d{3})/ ) {
+        if( $track2 =~ /(\d+)\^(\d{4})(\d{3})(\d{5})(\d{3})/ ) {
             $self->{ track2 } = {
                 PAN             => $1,
                 EXPIRATION_DATE => $2,
@@ -69,44 +68,46 @@ sub parse{
         $self->{ track3 }{ track } = $track3;
         chomp $track3;
         if( $track3 =~ /
-            (\d+)\^
-            (\d{3})
-            (\d{3})
-            (\d{4})
-            (\d{4})
-            (\d{4})
-            (\d{2})
-            (\d{1})
-            (\d{6})
-            (\d{1})
-            (\d{2})
-            (\d{2})
-            (\d{2})
-            (\d{4})
-            (\d{1})
-            (\d{9})
-            (\d{1})
-            (\d{6})
+            (?<fc>\d{2})
+            (?<pan>\d+)\^
+            (?<cc>\d{3})
+            (?<cur>\d{3})
+            (?<amountauth>\d{4})
+            (?<amountremaining>\d{4})
+            (?<cyclebegin>\d{4})
+            (?<cyclelenght>\d{2})
+            (?<retrycount>\d{1})
+            (?<pincp>\d{6})
+            (?<interchange>\d{1})
+            (?<pansr>\d{2})
+            (?<san1>\d{2})
+            (?<san2>\d{2})
+            (?<expirationdate>\d{4})
+            (?<cardsequence>\d{1})
+            (?<cardsecurity>\d{9})
+            (?<relaymarker>\d{1})
+            (?<cryptocheck>\d{6})
             /x){
             $self->{ track3 } = {
-                PAN             => $1,
-                COUNTRY_CODE    => $2,
-                CURRENCY_CODE   => $3,
-                AMOUNTAUTH      => $4,
-                AMOUNTREMAINING => $5,
-                CYCLE_BEGIN     => $6,
-                CYCLE_LENGHT    => $7,
-                RETRY_COUNT     => $8,
-                PINCP           => $9,
-                INTERCHANGE     => $10,
-                PANSR           => $11,
-                SAN1            => $12,
-                SAN2            => $13,
-                EXPIRATION_DATE => "1717",
-                CARD_SEQUENCE   => "1",
-                CARD_SECURITY   => "234567890",
-                RELAY_MARKER    => "3",
-                CRYPTO_CHECK    => "456789",
+                FORMAT_CODE     => $+{fc},
+                PAN             => $+{pan},
+                COUNTRY_CODE    => $+{cc},
+                CURRENCY_CODE   => $+{cur},
+                AMOUNTAUTH      => $+{amountauth},
+                AMOUNTREMAINING => $+{amountremaining},
+                CYCLE_BEGIN     => $+{cyclebegin},
+                CYCLE_LENGHT    => $+{cyclelenght},
+                RETRY_COUNT     => $+{retrycount},
+                PINCP           => $+{pincp},
+                INTERCHANGE     => $+{interchange},
+                PANSR           => $+{pansr},
+                SAN1            => $+{san1},
+                SAN2            => $+{san2},
+                EXPIRATION_DATE => $+{expirationdate},
+                CARD_SEQUENCE   => $+{cardsequence},
+                CARD_SECURITY   => $+{cardsecurity},
+                RELAY_MARKER    => $+{relaymarker},
+                CRYPTO_CHECK    => $+{cryptocheck},
            };
         }
     }
@@ -126,13 +127,16 @@ Card::Magnetic - Magnetic Stripe parser
 
 =head1 VERSION
 
-version 0.001
+version 0.002
 
 =head1 SYNOPSIS
 
 This module is a parser to the contents of the magnetic stripe from cards that follow the ISO 7810 norm.
 
-Now it parse the strip and create the basic structure on the object
+It will build a object that has the ISO 7813 tracks exploded as a hash, with each track, track1, track2
+with a hashref with the fields defined by the norm.
+
+Is also possible have cards that has only the track 1 and 2, 2 and 3 or any combination.
 
     use Card::Magnetic;
 
@@ -158,9 +162,31 @@ Stripe accessor
 
 Parse the stripe and create a internal hash hashref structure with the exploded layout of the card.
 
+    {
+        stripe => "full stripe content",
+        track1 => { }, # hash with the fields on track 1
+        track2 => { }, # Same as track 1, will have a hash with the track2 fields
+        track3 => { }, # Track3 
+    }
+
 =head1 AUTHOR
 
 Frederico Recsky <recsky@cpan.org>
+
+=SUPPORT
+
+You can find the source code and more details about magnetic cards
+on the links above:
+
+=over 4
+
+=item GitHub FredericoRecsky/Card
+L<https://github.com/fredericorecsky/card>
+
+=item ISO 7813 Explanation
+L<http://www.gae.ucm.es/~padilla/extrawork/tracks.html>
+
+=LICENSE AND COPYRIGHT
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.
